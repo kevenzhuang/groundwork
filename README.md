@@ -36,14 +36,30 @@ The layers above it, in progress, are: session capture (`gw end`), per-audience 
 (`gw site`), a local UI, agent integrations, and later a lab hub for multi-project oversight
 and approvals. Every layer reads and writes the same open files, so there is no lock-in.
 
-## Quick start
+## Quick start: one sentence
+
+Open your project in your AI agent (Claude Code, Codex, …) and say:
+
+> Set up Groundwork for this project, following
+> https://github.com/kevenzhuang/groundwork/blob/main/docs/agent-setup.md
+
+From then on, you only need two words:
+
+- **"start"** (开工): where things stand, what's blocked, what's next, and what is waiting for you.
+- **"end"** (收工): the agent asks you a few questions and records the answers. You confirm by merging its pull request.
+
+Your advisor and PI see the latest state on the repository's `STATUS.md`, on the web or in the
+GitHub mobile app. They approve decisions by approving the pull request.
+
+### Without an agent
 
 ```bash
-pip install groundwork-lab        # not yet on PyPI; for now: pip install -e .
-cd my-project && git init
-gw init . --title "My Study" --owner alice --owner-name "Alice"
+pipx install git+https://github.com/kevenzhuang/groundwork
+gw init . --title "My Study" --owner alice --github alice-gh
+gw start        # briefing
 gw note "dropped the second baseline: it duplicates the first"
-gw check                          # validate against the spec; exit 1 on errors
+gw end          # capture: asks only for reasons
+gw check        # validate against the spec
 ```
 
 `gw init` creates:
@@ -60,7 +76,10 @@ Most agents read that file automatically at the start of every session.
 
 | Command | Status | What it does |
 |---|---|---|
-| `gw init` | ✅ | Create the layout from templates; never overwrites existing files |
+| `gw init` | ✅ | Create the layout and the GitHub workflow; never overwrites existing files |
+| `gw start` | ✅ | Start-of-work briefing: last session, blocked, next, decisions and questions waiting for you |
+| `gw status` | ✅ | Regenerate `STATUS.md` (run automatically on every push to `main`) |
+| `gw approvals` | ✅ | Verify that `approved_by` matches real GitHub PR approvals (run automatically on PRs) |
 | `gw note` | ✅ | Append a timestamped note; blocks secrets |
 | `gw check` | ✅ | Validate roles, decision rights, decisions, ledger, confidentiality, and integrity |
 | `gw end` | ✅ | Session capture: collect git changes, notes, and agent transcripts; ask only for the reasons; confirm. `--answers` lets agents run it non-interactively; agents cannot `--confirm` |

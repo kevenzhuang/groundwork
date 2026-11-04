@@ -166,6 +166,7 @@ Front-matter field `principals`: a list. Each entry has:
 - `until` (optional)
 - `sponsor` (agents only)
 - `git_identity`: email or username
+- `github` (optional): the principal's GitHub login, used to verify approvals (§13)
 - `signing_key` (optional): a key fingerprint
 
 ### 3.3 `DECISION-RIGHTS.md`
@@ -406,7 +407,7 @@ Every step MUST work without AI. AI adapters MAY summarize, ask follow-up questi
 
 ### 8.3 Archive
 
-- Raw agent logs, and any other large or sensitive raw material, are stored outside the repository at `~/.gw/archive/<project-id>/`. The record holds a pointer and a sha256 hash.
+- Archiving is **off by default**. When it is enabled, raw agent logs and any other large or sensitive raw material are stored in `.groundwork/archive/`, which is gitignored. Nothing is written outside the project folder. The record holds a pointer and a sha256 hash.
 - Backups of the archive SHOULD be encrypted.
 - Tools MUST NOT depend on the retention settings of agent tools. For example, some tools delete their transcripts after 30 days by default, so logs are copied into the archive at capture time.
 
@@ -513,13 +514,26 @@ Removing leaked content is the only sanctioned rewrite of history. The procedure
 
 ---
 
-## 13. Out of scope (v0.2)
+## 13. GitHub-native mode (default)
+
+The record lives in a GitHub repository. GitHub supplies viewing, notifications, identity and approvals. Groundwork supplies the spec, the checks and the automation.
+
+1. **Status page.** On every push to the main line, automation regenerates `STATUS.md` (advisor-level view, §12 rules apply) and commits it. A tool MUST NOT hand-edit it.
+2. **Gate.** `gw check` runs on every pull request. The main line SHOULD be protected so that a failing check blocks the merge.
+3. **Approvals.** A T2 or T3 decision becomes `accepted` by merging a pull request that adds or changes it.
+   - Every principal named in `approved_by` MUST have approved that pull request on GitHub, under the `github` login listed in `ROLES.md`.
+   - `gw approvals` verifies this from the pull request's reviews.
+   - An approval written in a file without a matching GitHub review is invalid.
+4. **Notifications.** T2 notices and T3 requests are made by requesting a review from the relevant people on the pull request.
+5. **Start and end.** Users interact through two actions: *start* (`gw start`, a briefing) and *end* (`gw end`, the capture). Most users trigger them by telling their agent.
+
+## 14. Out of scope (v0.2)
 
 - A hosted platform, user accounts or real-time collaboration
 - Wet-lab ELN features
 - Capture from chat tools
 
-## 14. Pending items [PENDING]
+## 15. Pending items [PENDING]
 
 - Which first experience to promote: personal resume or team handoff.
 - The default weight of decision rights.

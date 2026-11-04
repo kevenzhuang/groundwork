@@ -177,7 +177,9 @@ def collect_agent_logs(root: Path, since: dt.datetime | None) -> list[Path]:
     return sorted(p for p in d.glob("*.jsonl") if p.stat().st_mtime > cutoff)
 
 
-def collect(root: Path, include_agent_logs: bool = True) -> Collected:
+def collect(root: Path, include_agent_logs: bool | None = None) -> Collected:
+    if include_agent_logs is None:
+        include_agent_logs = archive_enabled(root)
     prev = last_session(root)
     base = None
     since = None
@@ -215,9 +217,12 @@ def classify(root: Path, texts: list[str]) -> list[Finding]:
 
 # ---------------------------------------------------------------- archive
 def archive_dir(root: Path) -> Path:
-    cfg = load_config(root)
-    raw = cfg.get("archive_dir") or f"~/.gw/archive/{cfg.get('project_id', 'project')}"
-    return Path(os.path.expanduser(str(raw)))
+    """Always inside the project (spec §8.3): deleting the project removes everything."""
+    return root / ".groundwork" / "archive"
+
+
+def archive_enabled(root: Path) -> bool:
+    return bool(load_config(root).get("archive_agent_logs", False))
 
 
 def sha256(path: Path) -> str:

@@ -61,10 +61,13 @@ def init(
     owner: str = typer.Option(..., "--owner", prompt="Owner id (short, e.g. keven)", help="Owner principal id."),
     owner_name: str = typer.Option("", "--owner-name", help="Owner display name."),
     owner_git: Optional[str] = typer.Option(None, "--owner-git", help="Owner git email (default: git config)."),
+    github: Optional[str] = typer.Option(None, "--github", help="Owner's GitHub login (used to verify approvals)."),
+    no_workflow: bool = typer.Option(False, "--no-workflow", help="Don't add the GitHub Actions workflow."),
     force: bool = typer.Option(False, "--force", help="Overwrite existing files."),
 ) -> None:
     """Create the Groundwork layout in PATH (never overwrites without --force)."""
-    written = init_project(path, title, owner, owner_name or owner, owner_git, force)
+    written = init_project(path, title, owner, owner_name or owner, owner_git, force,
+                           owner_github=github, github_workflow=not no_workflow)
     for w in written:
         typer.echo(f"  created {w.relative_to(path.resolve()) if w.is_absolute() else w}")
     typer.secho(f"Initialized Groundwork project in {path.resolve()}", fg="green")
@@ -98,8 +101,10 @@ def end(
     answers_file: Optional[Path] = typer.Option(
         None, "--answers", help="YAML with did/thinking/blocked/next/unverified/reasons (for agents and scripts)."),
     draft: bool = typer.Option(False, "--draft", help="Don't ask questions; write a draft with blanks."),
+    preview: bool = typer.Option(False, "--preview", help="Only show what changed; write nothing."),
     confirm: bool = typer.Option(False, "--confirm", help="Mark the session confirmed by --as (humans only)."),
-    no_agent_logs: bool = typer.Option(False, "--no-agent-logs", help="Don't archive agent transcripts."),
+    archive_logs: Optional[bool] = typer.Option(None, "--archive-logs/--no-archive-logs",
+                                                help="Archive agent transcripts into .groundwork/archive (default: config)."),
 ) -> None:
     """End a working session: collect changes, ask only for reasons, write sessions/…md."""
     import yaml
@@ -115,7 +120,7 @@ def end(
         typer.secho("An agent cannot confirm a session (spec §5.2). Ask the human to confirm.", fg="red", err=True)
         raise typer.Exit(1)
 
-    col = collect(root, include_agent_logs=not no_agent_logs)
+    col = collect(root, include_agent_logs=archive_logs)
     answers: dict = {}
     if answers_file:
         answers = yaml.safe_load(answers_file.read_text(encoding="utf-8")) or {}
@@ -124,6 +129,13 @@ def end(
                 bold=True)
     typer.echo(f"  {len(col.changes)} changed file(s), {len(col.notes)} note(s), "
                f"{len(col.agent_logs)} agent transcript(s) to archive")
+
+    if preview:
+        for c in col.changes:
+            typer.echo(f"  {c.status:>2} {c.path}" + ("" if c.committed else "  (uncommitted)"))
+        for n in col.notes:
+            typer.echo(f"  note {n.when:%Y-%m-%d %H:%M} [{n.principal}] {n.text}")
+        return
 
     interactive = not (draft or answers_file)
     if interactive:
@@ -150,7 +162,7 @@ def end(
 
     try:
         path = write_session(root, who, col, answers, confirm=confirm and not is_agent,
-                             archive=not no_agent_logs)
+                             archive=True)
     except Blocked as exc:
         typer.secho(str(exc), fg="red", err=True)
         for f in exc.findings:
@@ -166,6 +178,49 @@ def end(
     if not confirm or is_agent:
         typer.echo("  Draft is unconfirmed. A human confirms with: gw end --confirm  (or edit and set confirmed_by)")
     typer.echo("  Next: review, commit, and open a PR.")
+
+
+@app.command()
+def start(principal: Optional[str] = typer.Option(None, "--as", help="Principal id (default: from git email).")) -> None:
+    """Start-of-work briefing: where things stand, what's next, what needs you."""
+    from .status import briefing
+
+    root = _root()
+    typer.echo(briefing(root, principal or _default_principal(root)))
+
+
+@app.command()
+def status(
+    lang: Optional[str] = typer.Option(None, "--lang", help="en | zh (default: config `language`)."),
+    stdout: bool = typer.Option(False, "--stdout", help="Print instead of writing STATUS.md."),
+) -> None:
+    """Regenerate STATUS.md, the status page GitHub shows (spec §13)."""
+    from .status import render_status, write_status
+
+    root = _root()
+    if stdout:
+        typer.echo(render_status(root, lang))
+    else:
+        typer.secho(f"wrote {write_status(root, lang).relative_to(root)}", fg="green")
+
+
+@app.command()
+def approvals(
+    reviews: Path = typer.Option(..., "--reviews", help="JSON from GET /repos/{o}/{r}/pulls/{n}/reviews"),
+    changed: Path = typer.Option(..., "--changed", help="File listing paths changed by the PR, one per line."),
+    author: Optional[str] = typer.Option(None, "--author", help="PR author's GitHub login."),
+) -> None:
+    """Verify that approved_by in changed decisions matches real GitHub PR approvals (spec §13.3)."""
+    from .approvals import verify
+
+    root = _root()
+    files = [l.strip() for l in changed.read_text(encoding="utf-8").splitlines() if l.strip()]
+    issues = verify(root, files, json.loads(reviews.read_text(encoding="utf-8")), author)
+    for i in issues:
+        typer.secho(f"E11 error   {i.path}: {i.message}", fg="red")
+    typer.secho(("✗ " if issues else "✓ ") + f"{len(issues)} approval problem(s)", fg="red" if issues else "green")
+    if issues:
+        raise typer.Exit(1)
 
 
 @app.command()

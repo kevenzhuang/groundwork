@@ -163,11 +163,22 @@ def extract(root: Path, audience: str = "receiver", now: dt.datetime | None = No
     now = now or dt.datetime.now()
     hidden = 0
 
-    proj_fm, proj_body = read_front_matter(root / "PROJECT.md") if (root / "PROJECT.md").is_file() else ({}, "")
-    roles_fm = read_front_matter(root / "ROLES.md")[0] if (root / "ROLES.md").is_file() else {}
+    bad: list[str] = []
+
+    def safe(name: str) -> tuple[dict, str]:
+        f = root / name
+        if not f.is_file():
+            return {}, ""
+        try:
+            return read_front_matter(f)
+        except FrontMatterError:
+            bad.append(name)
+            return {}, ""
+
+    proj_fm, proj_body = safe("PROJECT.md")
+    roles_fm = safe("ROLES.md")[0]
     principals = {str(p.get("id")): p for p in roles_fm.get("principals") or [] if isinstance(p, dict)}
 
-    bad: list[str] = []
     decisions, h = _records(root, "decisions", audience, bad); hidden += h
     sessions, h = _records(root, "sessions", audience, bad); hidden += h
     handoffs, h = _records(root, "handoffs", audience, bad); hidden += h
@@ -194,8 +205,8 @@ def extract(root: Path, audience: str = "receiver", now: dt.datetime | None = No
     oral_only = sum(1 for r in ledger if r["_oral_only"])
 
     questions = []
-    if (root / "open-questions.md").is_file():
-        qfm, _ = read_front_matter(root / "open-questions.md")
+    qfm, _ = safe("open-questions.md")
+    if qfm:
         questions = [q for q in qfm.get("questions") or [] if isinstance(q, dict)
                      and q.get("status", "open") == "open" and _visible(q.get("classification"), audience)]
 

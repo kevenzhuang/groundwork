@@ -58,6 +58,7 @@ class Principal:
     sponsor: str | None = None
     git_identity: str | None = None
     signing_key: str | None = None
+    github: str | None = None
 
     @property
     def is_agent(self) -> bool:
@@ -120,6 +121,7 @@ def parse_roster(data: dict[str, Any]) -> tuple[Roster, list[str]]:
             sponsor=str(e["sponsor"]) if e.get("sponsor") else None,
             git_identity=e.get("git_identity"),
             signing_key=e.get("signing_key"),
+            github=str(e["github"]).lstrip("@") if e.get("github") else None,
         )
     for p in roster.principals.values():
         if p.kind == "agent":

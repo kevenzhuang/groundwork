@@ -48,6 +48,8 @@ def init_project(
     owner_name: str,
     owner_git: str | None = None,
     force: bool = False,
+    owner_github: str | None = None,
+    github_workflow: bool = True,
     today: dt.date | None = None,
 ) -> list[Path]:
     """Render templates into `target`. Never overwrites existing files unless force=True."""
@@ -58,6 +60,7 @@ def init_project(
         "owner_id": owner_id,
         "owner_name": owner_name,
         "owner_git": owner_git or gitutil.user_email(target) or "",
+        "owner_github": (owner_github or "").lstrip("@"),
         "date": (today or dt.date.today()).isoformat(),
         "spec_version": SPEC_VERSION,
     }
@@ -65,12 +68,16 @@ def init_project(
     root = resources.files("groundwork").joinpath("templates/project")
     written: list[Path] = []
     for rel, res in sorted(_walk(root)):
+        if rel.startswith(".github/") and not github_workflow:
+            continue
         dest = target / rel
         if dest.exists() and not force:
             continue
         dest.parent.mkdir(parents=True, exist_ok=True)
         text = res.read_text(encoding="utf-8")
-        dest.write_text(env.from_string(text).render(**ctx), encoding="utf-8")
+        # GitHub workflow files use ${{ }} syntax of their own: copy verbatim.
+        rendered = text if rel.startswith(".github/") else env.from_string(text).render(**ctx)
+        dest.write_text(rendered, encoding="utf-8")
         written.append(dest)
     spec_dest = target / ".groundwork" / "SPEC.md"
     if force or not spec_dest.exists():

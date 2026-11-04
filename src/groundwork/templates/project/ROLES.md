@@ -7,6 +7,7 @@ principals:
     scope: ["*"]
     since: {{ date }}
     git_identity: "{{ owner_git }}"
+    github: "{{ owner_github }}"
 ---
 
 # Roles

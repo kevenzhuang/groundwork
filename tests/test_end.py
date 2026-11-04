@@ -21,10 +21,9 @@ def started(project, tmp_path_factory, monkeypatch):
     commit(project, "draft intro")
     logs = tmp_path_factory.mktemp("claude")
     monkeypatch.setenv("GW_CLAUDE_DIR", str(logs))
-    arch = tmp_path_factory.mktemp("archive")
     cfg = project / ".groundwork/config.yaml"
-    cfg.write_text(cfg.read_text().replace('archive_dir: "~/.gw/archive/demo-study"', f'archive_dir: "{arch}"'))
-    return project, logs, arch
+    cfg.write_text(cfg.read_text().replace("archive_agent_logs: false", "archive_agent_logs: true"))
+    return project, logs, project / ".groundwork" / "archive"
 
 
 def test_first_session_collects_history_and_skips_record_files(started):
@@ -89,6 +88,14 @@ def test_agent_logs_archived_with_hash(started):
     assert list(arch.rglob("s1.jsonl"))
 
 
+def test_archive_off_by_default(project, monkeypatch, tmp_path):
+    monkeypatch.setenv("GW_CLAUDE_DIR", str(tmp_path / "c"))
+    from groundwork.capture import claude_log_dir
+    commit(project, "init")
+    d = claude_log_dir(project); d.mkdir(parents=True); (d / "s.jsonl").write_text("{}\n")
+    assert collect(project).agent_logs == []
+
+
 def test_secret_in_answers_blocks_write(started):
     root, _, _ = started
     with pytest.raises(Blocked):
@@ -142,3 +149,11 @@ def test_cli_agent_cannot_confirm(started, monkeypatch):
     assert r.exit_code == 0
     fm, _ = read_front_matter(next((root / "sessions").glob("*.md")))
     assert fm["confirmed_by"] is None
+
+
+def test_cli_preview_writes_nothing(started, monkeypatch):
+    root, _, _ = started
+    monkeypatch.chdir(root)
+    r = CliRunner().invoke(app, ["end", "--preview"])
+    assert r.exit_code == 0 and "paper/intro.tex" in r.output
+    assert not list((root / "sessions").glob("*.md"))

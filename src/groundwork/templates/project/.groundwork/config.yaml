@@ -17,5 +17,9 @@ scan_exclude:
 # Default veto window for T2 decisions.
 veto_window: 3d
 
-# Where raw material is archived (spec §8.3). Outside the repo by default.
-archive_dir: "~/.gw/archive/{{ project_id }}"
+# Language for STATUS.md and views: en | zh
+language: en
+
+# Archive agent transcripts at session end (spec §8.3). Off by default.
+# When on, copies go to .groundwork/archive/ (gitignored), never outside the project.
+archive_agent_logs: false

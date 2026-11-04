@@ -32,7 +32,7 @@ jobs:
         run: |
           gh api "repos/${{ github.repository }}/pulls/$PR/reviews" > /tmp/reviews.json
           git diff --name-only "$BASE"...HEAD > /tmp/changed.txt
-          gw approvals --reviews /tmp/reviews.json --changed /tmp/changed.txt --author "$AUTHOR"
+          gw approvals --reviews /tmp/reviews.json --changed /tmp/changed.txt --author "$AUTHOR" --base "$BASE"
 
   status:
     if: github.event_name == 'push'

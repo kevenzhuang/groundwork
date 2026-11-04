@@ -76,20 +76,27 @@ def init(
     owner_name: str = typer.Option("", "--owner-name", help="Owner display name."),
     owner_git: Optional[str] = typer.Option(None, "--owner-git", help="Owner git email (default: git config)."),
     github: Optional[str] = typer.Option(None, "--github", help="Owner's GitHub login (used to verify approvals)."),
+    lead: Optional[str] = typer.Option(None, "--lead", help="Your id, if you set up the project for an owner (e.g. a PI)."),
+    lead_name: Optional[str] = typer.Option(None, "--lead-name", help="Your display name."),
+    lead_github: Optional[str] = typer.Option(None, "--lead-github", help="Your GitHub login."),
     no_workflow: bool = typer.Option(False, "--no-workflow", help="Don't add the GitHub Actions workflow."),
     force: bool = typer.Option(False, "--force", help="Overwrite existing files."),
 ) -> None:
     """Create the Groundwork layout in PATH (never overwrites without --force)."""
     from .model import ID_RE, _suggest_id
 
-    if not ID_RE.match(owner):
-        typer.secho(f"--owner `{owner}` is not a valid id (spec §3.2). Use e.g. `{_suggest_id(owner)}`; "
-                    "put your full name in --owner-name.", fg="red", err=True)
-        raise typer.Exit(2)
+    for flag, val in (("--owner", owner), ("--lead", lead)):
+        if val is not None and not ID_RE.match(val):
+            typer.secho(f"{flag} `{val}` is not a valid id (spec §3.2). Use e.g. `{_suggest_id(val)}`; "
+                        "put the full name in the matching --…-name option.", fg="red", err=True)
+            raise typer.Exit(2)
+    if lead and lead == owner:
+        lead = None
     lang = i18n.normalize(_STATE["lang"]) or i18n.detect_text(title, min_letters=2) or i18n.resolve(None)
     written = init_project(path, title, owner, owner_name or owner, owner_git, force,
                            owner_github=github, github_workflow=not no_workflow,
-                           language=lang if i18n.normalize(_STATE["lang"]) else "auto")
+                           language=lang if i18n.normalize(_STATE["lang"]) else "auto",
+                           lead_id=lead, lead_name=lead_name, lead_github=lead_github)
     for w in written:
         typer.echo(i18n.t("init.created", lang, path=w.relative_to(path.resolve()) if w.is_absolute() else w))
     typer.secho(i18n.t("init.done", lang, path=path.resolve()), fg="green")
@@ -229,13 +236,16 @@ def approvals(
     reviews: Path = typer.Option(..., "--reviews", help="JSON from GET /repos/{o}/{r}/pulls/{n}/reviews"),
     changed: Path = typer.Option(..., "--changed", help="File listing paths changed by the PR, one per line."),
     author: Optional[str] = typer.Option(None, "--author", help="PR author's GitHub login."),
+    base: Optional[str] = typer.Option(None, "--base", help="Git ref of the PR base; identities are read from it."),
 ) -> None:
-    """Verify that approved_by in changed decisions matches real GitHub PR approvals (spec §13.3)."""
+    """Verify approvals against real GitHub PR reviews (spec §13.3): approved_by in decisions,
+    and owner approval for changes to ROLES.md / DECISION-RIGHTS.md."""
     from .approvals import verify
 
     root = _root()
     files = [l.strip() for l in changed.read_text(encoding="utf-8").splitlines() if l.strip()]
-    issues = verify(root, files, json.loads(reviews.read_text(encoding="utf-8")), author)
+    base_roles = gitutil.show(root, base, "ROLES.md") if base else None
+    issues = verify(root, files, json.loads(reviews.read_text(encoding="utf-8")), author, base_roles)
     for i in issues:
         typer.secho(f"E11 error   {i.path}: {i.message}", fg="red")
     typer.secho(("✗ " if issues else "✓ ") + f"{len(issues)} approval problem(s)", fg="red" if issues else "green")

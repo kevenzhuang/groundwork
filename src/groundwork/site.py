@@ -278,8 +278,8 @@ LABELS = {
     },
 }
 AUDIENCE_LABEL = {
-    "en": {"owner": "Owner / PI", "advisor": "Advisor", "receiver": "Receiver (full record)", "public": "Public"},
-    "zh": {"owner": "负责人 / PI", "advisor": "导师", "receiver": "接手人（完整记录）", "public": "公开"},
+    "en": {"owner": "Project owner", "advisor": "Advisor", "receiver": "Receiver (full record)", "public": "Public"},
+    "zh": {"owner": "项目所有者", "advisor": "导师", "receiver": "接手人（完整记录）", "public": "公开"},
 }
 
 

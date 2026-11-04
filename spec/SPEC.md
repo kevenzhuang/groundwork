@@ -1,6 +1,7 @@
 # Groundwork Specification v0.2
 
-*A lab notebook for AI-era research. Move fast, keep every step on record.*
+*Research workflows you can trust, hand over, and build on.*
+*The open workflow standard for human–AI research.*
 
 - Status: draft, 2026-11-04
 - License: CC-BY-4.0 (see `spec/LICENSE`)

@@ -19,7 +19,7 @@ from .project import NotAProject, find_root
 app = typer.Typer(
     add_completion=False,
     no_args_is_help=True,
-    help="Groundwork: a lab notebook for AI-era research. Spec v" + SPEC_VERSION,
+    help="Groundwork: research workflows you can trust, hand over, and build on. Spec v" + SPEC_VERSION,
 )
 
 

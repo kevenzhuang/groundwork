@@ -169,6 +169,33 @@ def end(
 
 
 @app.command()
+def site(
+    audience: str = typer.Option("receiver", "--for", help="owner | advisor | receiver | public"),
+    lang: str = typer.Option("en", "--lang", help="en | zh"),
+    out: Optional[Path] = typer.Option(None, "--out", "-o", help="Output file (default .groundwork/build/<audience>.html)."),
+    all_: bool = typer.Option(False, "--all", help="Build owner, advisor and receiver views."),
+) -> None:
+    """Generate a self-contained, read-only HTML view of the record."""
+    from .site import AUDIENCES, TemplateViolation, build
+
+    root = _root()
+    targets = ["owner", "advisor", "receiver"] if all_ else [audience]
+    for a in targets:
+        if a not in AUDIENCES or lang not in ("en", "zh"):
+            typer.secho(f"unknown audience/lang: {a}/{lang}", fg="red", err=True)
+            raise typer.Exit(2)
+        try:
+            path = build(root, a, lang, out if not all_ else None)
+        except TemplateViolation as exc:
+            typer.secho(str(exc), fg="red", err=True)
+            raise typer.Exit(1)
+        shown = path.relative_to(root) if path.is_relative_to(root) else path
+        typer.secho(f"wrote {shown}  ({a}, {lang})", fg="green")
+    if "public" in targets:
+        typer.secho("Publishing a public view is a T3 decision (spec §12).", fg="yellow")
+
+
+@app.command()
 def check(
     as_json: bool = typer.Option(False, "--json", help="Machine-readable output."),
     strict: bool = typer.Option(False, "--strict", help="Treat warnings as errors."),

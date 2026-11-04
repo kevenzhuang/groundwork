@@ -64,7 +64,7 @@ Most agents read that file automatically at the start of every session.
 | `gw note` | ✅ | Append a timestamped note; blocks secrets |
 | `gw check` | ✅ | Validate roles, decision rights, decisions, ledger, confidentiality, and integrity |
 | `gw end` | ✅ | Session capture: collect git changes, notes, and agent transcripts; ask only for the reasons; confirm. `--answers` lets agents run it non-interactively; agents cannot `--confirm` |
-| `gw site` | planned | Generate a self-contained, read-only HTML view for each audience |
+| `gw site` | ✅ | Self-contained read-only HTML per audience (`--for owner|advisor|receiver|public`, `--lang en|zh`, `--all`). Restricted items never rendered; mandatory badges/header/footer enforced even for custom templates |
 | `gw ui` | planned | Local UI with Start, End, and Record pages |
 
 The full list of checks is in [spec §7](spec/SPEC.md#7-checks-gw-check).

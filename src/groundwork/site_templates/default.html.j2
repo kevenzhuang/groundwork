@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+{%- set m = d.meta -%}
+{%- set pf = d.project.fm -%}
+{%- set ps = d.project.sections -%}
+{%- set aud = m.audience -%}
+<html lang="{{ 'zh-CN' if lang == 'zh' else 'en' }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="{{ m.tool }}">
+<title>{{ pf.title or 'Project' }} · Groundwork</title>
+<style>
+:root{--bg:#f7f7f5;--card:#fff;--ink:#1d1d1f;--muted:#6b6b70;--line:#e6e6e3;--accent:#2f5d50;
+--ok:#1f7a4d;--ok-bg:#e3f4ea;--auto:#2457a6;--auto-bg:#e5eefb;--warn:#8a5a00;--warn-bg:#fdf1d8;
+--bad:#a3261f;--bad-bg:#fbe5e3;--off:#5f6368;--off-bg:#ececec;--r:12px}
+@media (prefers-color-scheme:dark){:root{--bg:#141416;--card:#1d1d20;--ink:#ececee;--muted:#9a9aa1;--line:#2c2c31;
+--accent:#7fc1aa;--ok:#7fd6a5;--ok-bg:#16301f;--auto:#8fb6f2;--auto-bg:#172338;--warn:#f0c46a;--warn-bg:#33270e;
+--bad:#f29b94;--bad-bg:#3a1714;--off:#b0b3b8;--off-bg:#2a2a2d}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+.wrap{max-width:880px;margin:0 auto;padding:20px 16px 48px}
+header.top{padding:8px 0 16px;border-bottom:1px solid var(--line);margin-bottom:20px}
+.brand{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:26px;line-height:1.25;margin:6px 0 10px}
+h2{font-size:17px;margin:0 0 12px}
+h3,h4,h5{font-size:15px;margin:14px 0 6px}
+.meta{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--muted)}
+.meta b{color:var(--ink);font-weight:600}
+.chip{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;line-height:20px;white-space:nowrap;border:1px solid transparent}
+.chip.stage{background:var(--accent);color:#fff}
+.s-human-verified{color:var(--ok);background:var(--ok-bg)}
+.s-auto-checked{color:var(--auto);background:var(--auto-bg)}
+.s-unverified{color:var(--warn);background:var(--warn-bg)}
+.s-disputed{color:var(--bad);background:var(--bad-bg)}
+.s-retracted{color:var(--off);background:var(--off-bg);text-decoration:line-through}
+.s-oral{color:var(--warn);border-color:var(--warn);background:transparent}
+.tier{background:var(--off-bg);color:var(--ink);font-family:ui-monospace,Menlo,monospace}
+.tier.T3{background:var(--bad-bg);color:var(--bad)}.tier.T2{background:var(--warn-bg);color:var(--warn)}
+.d-proposed{color:var(--warn);background:var(--warn-bg)}.d-accepted{color:var(--ok);background:var(--ok-bg)}
+.d-vetoed{color:var(--bad);background:var(--bad-bg)}.d-superseded{color:var(--off);background:var(--off-bg)}
+.banner{border-radius:var(--r);padding:10px 14px;margin:12px 0 0;font-size:14px}
+.banner.stale{background:var(--warn-bg);color:var(--warn);display:none}
+.banner.bad{background:var(--bad-bg);color:var(--bad)}
+.banner.hidden{background:var(--off-bg);color:var(--off)}
+section.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px 18px 14px;margin:0 0 16px}
+.grid{display:grid;grid-template-columns:1fr;gap:16px}
+@media(min-width:720px){.grid{grid-template-columns:1fr 1fr}}
+.grid>section.card{margin:0}
+.bar{display:flex;height:12px;border-radius:999px;overflow:hidden;background:var(--off-bg);margin:6px 0 12px}
+.bar span{display:block;height:100%}
+.bar .human-verified{background:var(--ok)}.bar .auto-checked{background:var(--auto)}.bar .unverified{background:var(--warn)}
+.bar .disputed{background:var(--bad)}.bar .retracted{background:var(--off)}
+.counts{display:flex;flex-wrap:wrap;gap:8px}
+.big{font-size:28px;font-weight:700;line-height:1}
+.item{border-top:1px solid var(--line);padding:12px 0}
+.item:first-of-type{border-top:0;padding-top:0}
+.item .t{font-weight:600}
+.small{font-size:13px;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:14px;margin:6px 0}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+.tablewrap{overflow-x:auto}
+code{font-family:ui-monospace,Menlo,monospace;font-size:.9em;background:var(--off-bg);padding:1px 5px;border-radius:5px}
+details>summary{cursor:pointer;color:var(--accent);font-size:14px;margin-top:4px}
+p{margin:6px 0}ul{margin:6px 0;padding-left:20px}
+a{color:var(--accent)}
+.legend{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+footer{margin-top:28px;padding-top:14px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+@media print{.banner.stale{display:none!important}body{background:#fff}section.card{break-inside:avoid}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top" data-gw="header">
+  <div class="brand">Groundwork</div>
+  <h1>{{ pf.title or 'Untitled project' }} {% if pf.stage %}<span class="chip stage">{{ pf.stage }}</span>{% endif %}</h1>
+  <div class="meta">
+    <span>{{ L.view_for }} <b>{{ A }}</b></span>
+    <span>{{ L.generated }} <b>{{ m.generated_at.replace('T', ' ') }}</b></span>
+    <span>{{ L.commit }} <b><code>{{ (m.commit or 'n/a')[:8] }}</code></b></span>
+    <span>{{ L.scope }} <b>{{ m.scope | join(', ') }}</b></span>
+  </div>
+  <div class="banner stale" id="gw-stale" data-generated="{{ m.generated_epoch_ms }}" data-stale-days="{{ m.stale_days }}"
+       data-text="{{ L.stale }}"></div>
+  {% if m.unreadable %}<div class="banner bad">{{ m.unreadable | length }} {{ L.unreadable }} {{ m.unreadable | join(', ') }}</div>{% endif %}
+  {% if m.hidden_items %}<div class="banner hidden">{{ m.hidden_items }} {{ L.hidden }}</div>{% endif %}
+</header>
+
+{# ---------- overview ---------- #}
+<section class="card">
+  <h2>{{ L.goal }}</h2>
+  {{ (ps.get('Goal') or L.none) | md }}
+  {% if ps.get('Current state') %}<h3>{{ L.state }}</h3>{{ ps.get('Current state') | md }}{% endif %}
+  {% if aud != 'owner' and ps.get('Main line of thinking') %}<h3>{{ L.thinking }}</h3>{{ ps.get('Main line of thinking') | md }}{% endif %}
+  {% if ps.get('Milestones') and '|' in ps.get('Milestones') and ps.get('Milestones').count('\n') > 1 %}
+    <h3>{{ L.milestones }}</h3><div class="tablewrap">{{ ps.get('Milestones') | md }}</div>{% endif %}
+</section>
+
+{# ---------- pending decisions ---------- #}
+{% if aud != 'public' and d.pending_decisions %}
+<section class="card">
+  <h2>{{ L.needs_decision }} ({{ d.pending_decisions | length }})</h2>
+  {% for x in d.pending_decisions %}
+  <div class="item">
+    <div class="t"><span class="chip tier {{ x.fm.tier }}">{{ x.fm.tier }}</span> {{ x.fm.title }}</div>
+    <div class="small">#{{ x.fm.id }} · {{ x.fm.date }} · {{ L.proposed_by }} {{ x.fm.proposed_by or x.fm.decider or '?' }}</div>
+    {% if x.sections.get('Decision') %}{{ x.sections.get('Decision') | md }}{% endif %}
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+
+<div class="grid">
+{# ---------- verification ---------- #}
+<section class="card">
+  <h2>{{ L.verification }}</h2>
+  {% set v = d.verification %}
+  <div class="big">{{ v.counts['human-verified'] }}<span class="small"> / {{ v.total }} {{ L.n_items }}</span></div>
+  <div class="small">{{ L.status['human-verified'] }}</div>
+  {% if v.total %}
+  <div class="bar" role="img" aria-label="verification breakdown">
+    {% for s in statuses %}{% if v.counts[s] %}<span class="{{ s }}" style="width:{{ (100 * v.counts[s] / v.total) | round(2) }}%"></span>{% endif %}{% endfor %}
+  </div>
+  {% endif %}
+  <div class="counts">
+    {% for s in statuses %}{% if v.counts[s] %}<span class="chip s-{{ s }}">{{ L.status[s] }} {{ v.counts[s] }}</span>{% endif %}{% endfor %}
+    {% if v.oral_only %}<span class="chip s-oral">{{ L.oral_only }} {{ v.oral_only }}</span>{% endif %}
+  </div>
+  <div class="legend" data-gw="badge-legend" aria-label="{{ L.legend }}">
+    {% for s in statuses %}<span class="chip s-{{ s }}">{{ L.status[s] }}</span>{% endfor %}<span class="chip s-oral">{{ L.oral_only }}</span>
+  </div>
+</section>
+
+{# ---------- open questions ---------- #}
+<section class="card">
+  <h2>{{ L.questions }} ({{ d.questions | length }})</h2>
+  {% for q in d.questions %}
+  <div class="item"><div>{{ q.question }}</div>
+    <div class="small">{{ q.id }} · {{ q.date }} · {{ L.routed }} {{ q.routed_to }}</div></div>
+  {% else %}<p class="small">{{ L.none }}</p>{% endfor %}
+</section>
+</div>
+<div style="height:16px"></div>
+
+{# ---------- decisions ---------- #}
+<section class="card" data-gw="decision-tier">
+  <h2>{{ L.decisions }}</h2>
+  {% set shown = d.decisions if aud != 'owner' else (d.decisions | selectattr('fm.tier', 'in', ['T2', 'T3']) | list) %}
+  {% for x in shown %}
+  <div class="item">
+    <div class="t"><span class="chip tier {{ x.fm.tier }}">{{ x.fm.tier }}</span>
+      <span class="chip d-{{ x.fm.status }}">{{ L.dstatus.get(x.fm.status, x.fm.status) }}</span> {{ x.fm.title }}</div>
+    <div class="small">#{{ x.fm.id }} · {{ x.fm.date }}
+      {% if x.fm.decider %} · {{ L.decider }} {{ x.fm.decider }}{% endif %}
+      {% if x.fm.approved_by %} · {{ L.approved }} {{ x.fm.approved_by }}{% endif %}
+      {% if x.fm.capture == 'reconstructed' %} · reconstructed{% endif %}</div>
+    {% if aud in ['advisor', 'receiver'] %}
+      {% if x.sections.get('Decision') %}{{ x.sections.get('Decision') | md }}{% endif %}
+      {% if aud == 'receiver' and x.sections.get('Reasons') %}<details><summary>Reasons</summary>{{ x.sections.get('Reasons') | md }}</details>{% endif %}
+    {% endif %}
+  </div>
+  {% else %}<p class="small">{{ L.none }}</p>{% endfor %}
+</section>
+
+{# ---------- sessions ---------- #}
+{% if aud != 'public' %}
+<section class="card">
+  <h2>{{ L.sessions }}</h2>
+  {% set n = 1 if aud == 'owner' else (3 if aud == 'advisor' else 10) %}
+  {% for s in d.sessions[:n] %}
+  <div class="item">
+    <div class="t">{{ s.fm.date }} · {{ s.fm.principal }}
+      {% if not s.fm.confirmed_by %}<span class="chip s-unverified">{{ L.unconfirmed }}</span>{% endif %}</div>
+    {% if aud == 'owner' %}
+      {% for k, lab in [('Blocked', L.blocked), ('Next', L.next)] %}{% if s.sections.get(k) and '_(blank)_' not in s.sections.get(k) %}<h4>{{ lab }}</h4>{{ s.sections.get(k) | md }}{% endif %}{% endfor %}
+    {% else %}
+      {% if s.sections.get('Did') %}{{ s.sections.get('Did') | md }}{% endif %}
+      {% if aud == 'receiver' %}<details><summary>…</summary>
+        {% for k in ['Thinking', 'Changes and reasons', 'Blocked', 'Next', 'Unverified items touched'] %}{% if s.sections.get(k) %}<h4>{{ k }}</h4>{{ s.sections.get(k) | md }}{% endif %}{% endfor %}
+      </details>{% endif %}
+    {% endif %}
+  </div>
+  {% else %}<p class="small">{{ L.none }}</p>{% endfor %}
+</section>
+{% endif %}
+
+{# ---------- receiver: ledger, timeline, handoffs ---------- #}
+{% if aud == 'receiver' %}
+{% if d.ledger %}
+<section class="card">
+  <h2>{{ L.verification }} · {{ d.ledger | length }} {{ L.n_items }}</h2>
+  {% set open_rows = d.ledger | rejectattr('status', 'equalto', 'human-verified') | list %}
+  {% set done_rows = d.ledger | selectattr('status', 'equalto', 'human-verified') | list %}
+  {% macro rows(items) %}<div class="tablewrap"><table>
+    <thead><tr><th>id</th><th>status</th><th>verified_by</th><th>method</th><th>notes</th></tr></thead>
+    <tbody>{% for r in items %}<tr>
+      <td><code>{{ r.id }}</code></td>
+      <td><span class="chip s-{{ r.status or 'unverified' }}">{{ L.status.get(r.status, r.status) }}</span>
+          {% if r._oral_only %}<span class="chip s-oral">{{ L.oral_only }}</span>{% endif %}</td>
+      <td>{{ r.verified_by }}</td><td>{{ r.method }}</td><td>{{ r.notes }}</td></tr>{% endfor %}</tbody>
+  </table></div>{% endmacro %}
+  {% if open_rows %}{{ rows(open_rows) }}{% endif %}
+  {% if done_rows %}<details><summary>{{ L.verified_collapsed }} ({{ done_rows | length }})</summary>{{ rows(done_rows) }}</details>{% endif %}
+</section>
+{% endif %}
+{% if d.timeline %}
+<section class="card"><h2>{{ L.timeline }}</h2>
+  {% for t in d.timeline %}<div class="item"><div class="t">{{ t.fm.stage }}</div>
+    <div class="small">{{ t.fm.from }} → {{ t.fm.to or '…' }}{% if t.fm.capture == 'reconstructed' %} · reconstructed{% endif %}</div>
+    {{ t.body | md }}</div>{% endfor %}
+</section>
+{% endif %}
+{% if d.handoffs %}
+<section class="card"><h2>{{ L.handoffs }}</h2>
+  {% for h in d.handoffs %}<div class="item"><div class="t">{{ h.fm.from }} → {{ h.fm.to }} ({{ h.fm.role }})</div>
+    <div class="small">{{ h.fm.date }}</div>{{ (h.sections.get('Summary') or '') | md }}</div>{% endfor %}
+</section>
+{% endif %}
+{% endif %}
+
+<footer data-gw="footer">
+  {{ L.footer.format(tool=m.tool, spec=m.spec) }}
+</footer>
+</div>
+<script>
+(function(){var b=document.getElementById('gw-stale');if(!b)return;
+var g=+b.dataset.generated,lim=+b.dataset.staleDays,days=Math.floor((Date.now()-g)/864e5);
+if(days>=lim){b.textContent=b.dataset.text.replace('{d}',days);b.style.display='block';}})();
+</script>
+</body>
+</html>

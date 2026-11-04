@@ -225,7 +225,12 @@ Tables MAY add domain-specific columns.
 
 ### 3.7 `sessions/YYYY-MM-DD-<principal>[-n].md`
 
-Front-matter fields: `principal`, `date`, `capture`, `confirmed_by`, `sources`. The `sources` field records what was collected, as pointers (§8.4).
+Front-matter fields:
+
+- `principal`, `date`, `capture`, `confirmed_by`.
+- `base` and `head`: the commit range this session covers. The next capture starts from `head`.
+- `ended_at`: an ISO timestamp. Notes written after it belong to the next session.
+- `sources`: a list of pointers (§8.4) to what was collected, such as `commit:`, `repo:notes/...` and `archive:` entries.
 
 Body sections:
 
@@ -386,7 +391,7 @@ Capture is triggered by **change**, not by AI sessions. Ways to start it:
 
 ### 8.2 Pipeline
 
-1. **Collect.** Gather everything since the last confirmed session:
+1. **Collect.** Gather everything since the last confirmed session. If there is no confirmed session yet, start from the commit that adopted Groundwork, so that scaffolding and older history are not asked about. Collect:
    - git changes;
    - document snapshots;
    - agent session logs;

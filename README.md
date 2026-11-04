@@ -63,7 +63,7 @@ Most agents read that file automatically at the start of every session.
 | `gw init` | ✅ | Create the layout from templates; never overwrites existing files |
 | `gw note` | ✅ | Append a timestamped note; blocks secrets |
 | `gw check` | ✅ | Validate roles, decision rights, decisions, ledger, confidentiality, and integrity |
-| `gw end` | planned | Session capture: collect changes, ask only for the reasons, confirm |
+| `gw end` | ✅ | Session capture: collect git changes, notes, and agent transcripts; ask only for the reasons; confirm. `--answers` lets agents run it non-interactively; agents cannot `--confirm` |
 | `gw site` | planned | Generate a self-contained, read-only HTML view for each audience |
 | `gw ui` | planned | Local UI with Start, End, and Record pages |
 

@@ -93,6 +93,82 @@ def note(
 
 
 @app.command()
+def end(
+    principal: Optional[str] = typer.Option(None, "--as", help="Principal id (default: from git email)."),
+    answers_file: Optional[Path] = typer.Option(
+        None, "--answers", help="YAML with did/thinking/blocked/next/unverified/reasons (for agents and scripts)."),
+    draft: bool = typer.Option(False, "--draft", help="Don't ask questions; write a draft with blanks."),
+    confirm: bool = typer.Option(False, "--confirm", help="Mark the session confirmed by --as (humans only)."),
+    no_agent_logs: bool = typer.Option(False, "--no-agent-logs", help="Don't archive agent transcripts."),
+) -> None:
+    """End a working session: collect changes, ask only for reasons, write sessions/…md."""
+    import yaml
+
+    from .capture import SECTIONS, Blocked, collect, group_changes, missing_reasons, write_session
+    from .model import parse_roster
+
+    root = _root()
+    who = principal or _default_principal(root)
+    roster, _ = parse_roster(read_front_matter(root / "ROLES.md")[0])
+    is_agent = roster.is_agent(who)
+    if confirm and is_agent:
+        typer.secho("An agent cannot confirm a session (spec §5.2). Ask the human to confirm.", fg="red", err=True)
+        raise typer.Exit(1)
+
+    col = collect(root, include_agent_logs=not no_agent_logs)
+    answers: dict = {}
+    if answers_file:
+        answers = yaml.safe_load(answers_file.read_text(encoding="utf-8")) or {}
+
+    typer.secho(f"Session for {who}" + (f" since {col.since:%Y-%m-%d %H:%M}" if col.since else " (first session)"),
+                bold=True)
+    typer.echo(f"  {len(col.changes)} changed file(s), {len(col.notes)} note(s), "
+               f"{len(col.agent_logs)} agent transcript(s) to archive")
+
+    interactive = not (draft or answers_file)
+    if interactive:
+        reasons = dict(answers.get("reasons") or {})
+        for label, members in group_changes([c for c in col.changes if not reasons.get(c.path)]).items():
+            what = f"`{label}`" if len(members) == 1 else f"{len(members)} files in `{label}`"
+            r = typer.prompt(f"  Why did {what} change? (Enter to skip)", default="", show_default=False)
+            if r.strip():
+                for c in members:
+                    reasons[c.path] = r.strip()
+        answers["reasons"] = reasons
+        prompts = {
+            "did": "What did you do? (one line is fine)",
+            "thinking": "What were you thinking or trying?",
+            "blocked": "Anything blocked?",
+            "next": "What's next?",
+            "unverified": "Anything you relied on that isn't verified yet?",
+        }
+        for key in SECTIONS:
+            if not answers.get(key):
+                answers[key] = typer.prompt(f"  {prompts[key]}", default="", show_default=False)
+        if not is_agent and not confirm:
+            confirm = typer.confirm("Confirm this record as accurate?", default=True)
+
+    try:
+        path = write_session(root, who, col, answers, confirm=confirm and not is_agent,
+                             archive=not no_agent_logs)
+    except Blocked as exc:
+        typer.secho(str(exc), fg="red", err=True)
+        for f in exc.findings:
+            typer.echo(f"  {f.kind}: {f.excerpt}", err=True)
+        typer.echo("Remove it or use a placeholder like [withheld: credential; ask <id>].", err=True)
+        raise typer.Exit(1)
+
+    missing = missing_reasons(col, answers)
+    typer.secho(f"wrote {path.relative_to(root)}", fg="green")
+    if missing:
+        typer.secho(f"  {len(missing)} change(s) without a reason: " + ", ".join(missing[:5])
+                    + (" …" if len(missing) > 5 else ""), fg="yellow")
+    if not confirm or is_agent:
+        typer.echo("  Draft is unconfirmed. A human confirms with: gw end --confirm  (or edit and set confirmed_by)")
+    typer.echo("  Next: review, commit, and open a PR.")
+
+
+@app.command()
 def check(
     as_json: bool = typer.Option(False, "--json", help="Machine-readable output."),
     strict: bool = typer.Option(False, "--strict", help="Treat warnings as errors."),

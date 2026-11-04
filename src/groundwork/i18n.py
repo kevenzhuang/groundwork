@@ -144,6 +144,8 @@ MESSAGES: dict[str, dict[str, str]] = {
     "start.none": {"en": "No confirmed session yet. Say \"end\" (or run `gw end`) when you finish working.",
                    "zh": "还没有已确认的工作记录。结束工作时说\"收工\"（或运行 `gw end`）。"},
     "start.drafts": {"en": "⚠ {n} unconfirmed session draft(s): {files}", "zh": "⚠ {n} 份工作记录草稿待确认：{files}"},
+    "start.upgrade": {"en": "ℹ This project follows spec {old}; your tool supports {new}. Run `gw upgrade` when convenient.",
+                      "zh": "ℹ 本项目使用规范 {old}，你的工具已支持 {new}。方便时运行 `gw upgrade` 升级。"},
     "start.pending": {"en": "Waiting for a decision:", "zh": "待决定事项："},
     "start.questions": {"en": "Questions for you ({who}):", "zh": "需要你（{who}）回答的问题："},
     "start.verif": {"en": "Verification: {h}/{t} human-verified, {u} unverified, {d} disputed, {o} oral-only",

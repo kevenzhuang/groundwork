@@ -1,4 +1,4 @@
-# Groundwork Specification v0.2
+# Groundwork Specification v0.3
 
 *Research workflows you can trust, hand over, and build on.*
 *The open workflow standard for human–AI research.*
@@ -8,7 +8,13 @@
 - The key words MUST, MUST NOT, SHOULD, SHOULD NOT and MAY are used as described in RFC 2119.
 - Items marked **[PENDING]** are waiting on user-research evidence and may change.
 
-Changes since v0.1:
+Changes in v0.3:
+- Member identity rules: a standardized `id`, a free-form `name`, `aliases` and `orcid` (§3.2, §3.2.1, E12).
+- GitHub-native mode (§13).
+- Language principle (principle 11).
+- Versioning and upgrades (§16).
+
+Changes in v0.2 (since v0.1):
 - New sections: capture and storage (§8), confidentiality (§9), identity (§10.2–10.3), publishing views and templates (§12).
 - New principles: AI-optional and local-first (§0).
 - Verification status, rather than authorship, is now the primary axis (§1.3).
@@ -546,6 +552,18 @@ The record lives in a GitHub repository. GitHub supplies viewing, notifications,
    - An approval written in a file without a matching GitHub review is invalid.
 4. **Notifications.** T2 notices and T3 requests are made by requesting a review from the relevant people on the pull request.
 5. **Start and end.** Users interact through two actions: *start* (`gw start`, a briefing) and *end* (`gw end`, the capture). Most users trigger them by telling their agent.
+
+## 16. Versioning and upgrades
+
+1. Every project declares the spec version it follows in `.groundwork/spec-version`. Automation MUST use a tool version pinned to that spec. For example, the GitHub workflow installs a tagged release, never the moving main line.
+2. A newer tool MUST NOT tighten the rules for a project that has not upgraded. A rule introduced in spec *X* is reported as a **warning** for projects declaring a version below *X*. The warning says that it becomes an error after upgrading.
+3. Upgrading is a deliberate, reviewable change. `gw upgrade` does the following:
+   - updates the project's spec copy, its `spec-version`, the workflow pin and any missing configuration keys;
+   - shows the changelog entries between the two versions;
+   - re-runs `gw check`.
+
+   The result is committed through a pull request, like any other change.
+4. Tools SHOULD tell users, without using the network, when the installed tool supports a newer spec than the project declares (for example in `gw start`).
 
 ## 14. Out of scope (v0.2)
 

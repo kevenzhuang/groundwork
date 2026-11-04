@@ -138,7 +138,7 @@ def parse_roster(data: dict[str, Any]) -> tuple[Roster, list[str]]:
         if pid.lower() in {k.lower() for k in roster.principals}:
             problems.append(f"duplicate principal id `{pid}` (ids are compared case-insensitively)")
         if not str(e.get("name") or "").strip():
-            problems.append(f"`{pid}`: `name` is required (any language or format)")
+            problems.append(f"{FMT}`{pid}`: `name` is required (any language or format)")
         gh = str(e["github"]).lstrip("@") if e.get("github") else None
         if gh and not GITHUB_RE.match(gh):
             problems.append(f"{FMT}`{pid}`: `github` is not a valid GitHub login: {gh!r}")

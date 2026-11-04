@@ -139,6 +139,11 @@ def briefing(root: Path, who: str, now: dt.datetime | None = None, lang: str | N
     d = extract(root, "receiver", now=now)
     pf = d["project"]["fm"]
     lines = [tr("start.project", title=pf.get("title", "?"), stage=pf.get("stage", "?"))]
+    from . import SPEC_VERSION, vtuple
+    from .upgrade import project_spec
+    pv = project_spec(root)
+    if vtuple(pv) < vtuple(SPEC_VERSION):
+        lines.append(tr("start.upgrade", old=pv, new=SPEC_VERSION))
     confirmed = [s for s in d["sessions"] if s["fm"].get("confirmed_by")]
     drafts = [s for s in d["sessions"] if not s["fm"].get("confirmed_by")]
     if confirmed:

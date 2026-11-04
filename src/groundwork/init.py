@@ -9,7 +9,7 @@ from pathlib import Path
 
 from jinja2 import Environment, StrictUndefined
 
-from . import SPEC_VERSION, gitutil
+from . import SPEC_VERSION, __version__, gitutil
 
 EMPTY_DIRS = ["timeline", "sessions", "handoffs", "notes"]
 
@@ -78,7 +78,8 @@ def init_project(
         dest.parent.mkdir(parents=True, exist_ok=True)
         text = res.read_text(encoding="utf-8")
         # GitHub workflow files use ${{ }} syntax of their own: copy verbatim.
-        rendered = text if rel.startswith(".github/") else env.from_string(text).render(**ctx)
+        rendered = (text.replace("__GW_VERSION__", __version__) if rel.startswith(".github/")
+                    else env.from_string(text).render(**ctx))
         dest.write_text(rendered, encoding="utf-8")
         written.append(dest)
     spec_dest = target / ".groundwork" / "SPEC.md"

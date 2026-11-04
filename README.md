@@ -88,6 +88,20 @@ Most agents read that file automatically at the start of every session.
 | `gw site` | ✅ | Self-contained read-only HTML per audience (`--for owner|advisor|receiver|public`, `--lang en|zh`, `--all`). Restricted items never rendered; mandatory badges/header/footer enforced even for custom templates |
 | `gw ui` | planned | Local UI with Start, End, and Record pages |
 
+| `gw upgrade` | ✅ | Move a project to the installed tool's spec version (reviewed as a PR) |
+| `gw who` | ✅ | Find a member's id from a name or alias (`gw who 王老师`) |
+
+## Updates never surprise you
+
+- Each project declares the spec version it follows, and its GitHub workflow installs that exact tagged release.
+  A new Groundwork release never changes the rules for a project that hasn't upgraded.
+- Rules introduced in a newer spec appear only as **warnings** until you run `gw upgrade`.
+- `gw start` tells you when an upgrade is available. No network access is needed: it compares local versions.
+- `gw upgrade` updates the project's spec copy, the workflow pin and any missing settings, shows what changed
+  ([CHANGELOG](CHANGELOG.md)), and re-runs the checks. You review and merge it like any other change.
+
+To update the tool itself: `pipx upgrade groundwork-lab`, or reinstall from GitHub.
+
 The full list of checks is in [spec §7](spec/SPEC.md#7-checks-gw-check).
 
 ## Using it in CI

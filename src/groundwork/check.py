@@ -85,9 +85,20 @@ class Checker:
         self.check_references()
         self.check_confidentiality()
         self.check_integrity()
+        self.apply_version_gate()
         order = {"error": 0, "warning": 1}
         self.issues.sort(key=lambda i: (order[i.level], i.code, i.path))
         return self.issues
+
+    def apply_version_gate(self) -> None:
+        """Spec §16.2: rules newer than the project's declared spec only warn."""
+        from .upgrade import RULE_SINCE, is_newer_rule, project_spec
+        pv = project_spec(self.root)
+        for i in self.issues:
+            if i.level == "error" and is_newer_rule(i.code, pv):
+                i.level = "warning"
+                i.message += (f" [new in spec {RULE_SINCE[i.code]}: becomes an error after `gw upgrade`;"
+                              f" this project follows spec {pv}]")
 
     def check_required_files(self) -> None:
         for f in REQUIRED_FILES:

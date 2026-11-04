@@ -273,6 +273,33 @@ def site(
 
 
 @app.command()
+def upgrade(dry_run: bool = typer.Option(False, "--dry-run", help="Show what would change; write nothing.")) -> None:
+    """Upgrade this project to the installed tool's spec version (spec §16). Review the result in a PR."""
+    from .upgrade import upgrade as do_upgrade
+
+    root = _root()
+    try:
+        res = do_upgrade(root, dry_run=dry_run)
+    except RuntimeError as exc:
+        typer.secho(str(exc), fg="red", err=True)
+        raise typer.Exit(2)
+    if res.up_to_date:
+        typer.secho(f"✓ already on spec {res.new}", fg="green")
+        return
+    verb = "would update" if dry_run else "updated"
+    typer.secho(f"spec {res.old} → {res.new}: {verb} " + ", ".join(res.changed), fg="green")
+    if res.changelog:
+        typer.echo("\n" + "\n".join(res.changelog) + "\n")
+    if not dry_run:
+        issues = run_check(root)
+        errs = [i for i in issues if i.level == "error"]
+        for i in errs:
+            typer.secho(f"{i.code} {i.path}: {i.message}", fg="red")
+        typer.echo(f"{len(errs)} error(s) to fix. Then commit on a branch and open a pull request "
+                   "(an upgrade is a reviewable change).")
+
+
+@app.command()
 def who(name: list[str] = typer.Argument(..., help="A name, alias, id or GitHub login.")) -> None:
     """Find a member's id from how people refer to them (e.g. `gw who 王老师`)."""
     root = _root()

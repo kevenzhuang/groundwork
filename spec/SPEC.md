@@ -164,19 +164,29 @@ Keep it to about one page.
 
 ### 3.2 `ROLES.md`
 
-Front-matter field `principals`: a list. Each entry has:
+Front-matter field `principals`: a list. Each entry has these fields.
 
-- `id`
-- `name`
-- `kind` (`human` or `agent`)
-- `roles`
-- `scope`
-- `since`
-- `until` (optional)
-- `sponsor` (agents only)
-- `git_identity`: email or username
-- `github` (optional): the principal's GitHub login, used to verify approvals (§13)
-- `signing_key` (optional): a key fingerprint
+| Field | Required | Format and meaning |
+|---|---|---|
+| `id` | yes | The stable key every record uses to refer to this principal. It must match `^[a-z][a-z0-9-]{1,31}$`: lowercase ASCII letters, digits and hyphens, 2–32 characters, starting with a letter. It must be unique within the project, compared case-insensitively. An `id` MUST NOT change and MUST NOT be reused (§3.2.1). Examples: `keven`, `arnold-wang`, `claude-1`. |
+| `name` | yes | Display name, free-form, in any language and any order (e.g. `庄子钧`, `Zijun "Keven" Zhuang`). Groundwork does not standardize names. |
+| `aliases` | no | Other ways people refer to this principal (e.g. `[Keven, 子钧, Zhuang]`). Agents use these to map what humans say to an `id`. |
+| `kind` | yes | `human` or `agent` |
+| `roles` | yes | A list of roles from §1.1. |
+| `scope` | no | Paths or areas the principal may read and write. Default: everything. |
+| `since` | no | Date. |
+| `until` | no | Date. A principal whose `until` has passed stays in the file, so that old records keep resolving. |
+| `sponsor` | agents | The `id` of the responsible human. |
+| `git_identity` | no | The email address used in commits. |
+| `github` | no | GitHub login, used to verify approvals (§13). It must be a valid GitHub login. |
+| `orcid` | no | ORCID iD (`0000-0000-0000-000X`), for authorship and contribution records. |
+| `signing_key` | no | A key fingerprint. |
+
+#### 3.2.1 References to principals
+
+Every field that names a principal MUST contain a known `id`, never a display name. These fields are: `owner`, `decider`, `approved_by`, `proposed_by`, `notified`, `confirmed_by`, `verified_by`, `asked_by`, `routed_to`, `principal`, `from`, `to`, `sponsor`, and `confirmed_by_from`.
+
+If a person must be renamed, edit `name` and `aliases`. If an `id` really must change (for example, two people chose the same one), add a new principal with `formerly: <old id>` and set `until` on the old entry. Past records keep the old `id`.
 
 ### 3.3 `DECISION-RIGHTS.md`
 
@@ -377,6 +387,7 @@ Errors:
 - E08: A file contains a term from the project blocklist (§9.1).
 - E09: Integrity: an accepted decision, a confirmed session or a confirmed handoff was modified (requires git history).
 - E10: An invalid enum value appears (`classification`, `status`, `capture`).
+- E12: A field that names a principal (§3.2.1) refers to an `id` that is not in `ROLES.md`, or a principal entry has a malformed `id`, `github` or `orcid`.
 
 Warnings:
 

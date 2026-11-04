@@ -16,7 +16,8 @@ and pages automatically. To force one, set `language: zh` (or `en`) in `.groundw
    `pipx install git+https://github.com/kevenzhuang/groundwork` (or `pip install --user ...` if pipx is missing).
 3. **Ask the human three things, together in one message:**
    - the project title;
-   - a short id for themselves (for example `keven`);
+   - a short id for themselves: lowercase letters, digits and hyphens (for example `keven`). Suggest one
+     from their name. Their full name, in any language, goes in `--owner-name`;
    - their GitHub login.
 4. **Initialize on a new branch:**
    ```
@@ -71,6 +72,12 @@ When something changes direction (method, scope, venue, authorship, public relea
 - Write `decisions/NNNN-<slug>.md` as a **T0 proposal** (`status: proposed`, `proposed_by: <your id>`).
 - Open a pull request and request review from the person `DECISION-RIGHTS.md` names for that area.
 - Never set `decider` or `approved_by` yourself. Only the human, through their GitHub review, makes it accepted.
+
+## People and ids
+
+- Every record refers to people by their `id` from `ROLES.md`, never by display name.
+- When the human says "ask Arnold" or "王老师", run `gw who <name>` to get the id. If nothing matches,
+  ask them, then add the person to `ROLES.md` with `name` and `aliases`.
 
 ## Never
 

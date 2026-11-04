@@ -48,6 +48,7 @@ principals:
     roles: [advisor]
     git_identity: bob@example.org
   - id: claude-1
+    name: Claude
     kind: agent
     roles: [agent]
     sponsor: alice

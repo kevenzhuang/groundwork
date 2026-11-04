@@ -19,6 +19,7 @@ from .model import (
     VERIFICATION_STATUSES,
     FrontMatterError,
     Roster,
+    FMT,
     parse_roster,
     read_front_matter,
     split_front_matter,
@@ -81,6 +82,7 @@ class Checker:
         self.check_ledger()
         self.check_sessions()
         self.check_questions()
+        self.check_references()
         self.check_confidentiality()
         self.check_integrity()
         order = {"error": 0, "warning": 1}
@@ -101,7 +103,10 @@ class Checker:
             return
         self.roster, problems = parse_roster(fm)
         for msg in problems:
-            self.err("E02", "ROLES.md", msg)
+            if msg.startswith(FMT):
+                self.err("E12", "ROLES.md", msg[len(FMT):])
+            else:
+                self.err("E02", "ROLES.md", msg)
 
     def check_decision_rights(self) -> None:
         p = self.root / "DECISION-RIGHTS.md"
@@ -154,9 +159,8 @@ class Checker:
             elif tier in TIERS:
                 if not decider:
                     self.err("E03", rel, f"{tier} requires `decider`")
-                elif self.roster.principals and not self.roster.is_human(decider):
-                    kind = "an agent" if self.roster.is_agent(decider) else "not a known human"
-                    self.err("E04", rel, f"decider `{decider}` is {kind}")
+                elif self.roster.is_agent(decider):
+                    self.err("E04", rel, f"decider `{decider}` is an agent")
             if tier == "T2":
                 for key in ("notified", "veto_window"):
                     if not fm.get(key):
@@ -165,8 +169,8 @@ class Checker:
                 ab = fm.get("approved_by")
                 if not ab:
                     self.err("E03", rel, "T3 requires `approved_by`")
-                elif self.roster.principals and not self.roster.is_human(ab):
-                    self.err("E04", rel, f"approved_by `{ab}` is not a known human")
+                elif any(self.roster.is_agent(x) for x in _ids(ab)):
+                    self.err("E04", rel, f"approved_by `{ab}` includes an agent")
             sup = fm.get("supersedes")
             if sup and str(sup) not in seen and not any(
                 str(sup) == str((self._fm(q) or {}).get("id")) for q in d.glob("*.md")
@@ -222,8 +226,8 @@ class Checker:
             self._enum(rel, "capture", fm.get("capture"), CAPTURES)
             if not fm.get("confirmed_by"):
                 self.warn("W04", rel, "session draft not yet confirmed")
-            elif self.roster.principals and not self.roster.is_human(fm["confirmed_by"]):
-                self.err("E04", rel, f"confirmed_by `{fm['confirmed_by']}` is not a known human")
+            elif self.roster.is_agent(fm["confirmed_by"]):
+                self.err("E04", rel, f"confirmed_by `{fm['confirmed_by']}` is an agent")
 
     def check_questions(self) -> None:
         p = self.root / "open-questions.md"
@@ -241,6 +245,65 @@ class Checker:
                     date = None
             if isinstance(date, dt.date) and (self.today - date).days > 30:
                 self.warn("W02", "open-questions.md", f"{q.get('id')} open for {(self.today - date).days} days")
+
+    REF_FIELDS = {
+        "decisions": ("decider", "approved_by", "proposed_by", "notified"),
+        "sessions": ("principal", "confirmed_by"),
+        "handoffs": ("from", "to", "confirmed_by_from", "approved_by"),
+        "timeline": (),
+    }
+
+    def _ref(self, path: str, field: str, value: Any) -> None:
+        for pid in _ids(value):
+            if self.roster.get(pid) is not None:
+                continue
+            hits = self.roster.resolve(pid)
+            hint = f"; did you mean `{hits[0].id}`?" if len(hits) == 1 else ""
+            self.err("E12", path, f"`{field}` refers to unknown principal `{pid}`{hint} "
+                                  "(use the `id` from ROLES.md, not a display name)")
+
+    def check_references(self) -> None:
+        """E12: every field naming a principal must hold a known id (spec §3.2.1)."""
+        if not self.roster.principals:
+            return
+        for folder, fields in self.REF_FIELDS.items():
+            d = self.root / folder
+            if not d.is_dir():
+                continue
+            for p in sorted(d.glob("*.md")):
+                try:
+                    fm, _ = read_front_matter(p)
+                except FrontMatterError:
+                    continue
+                for f in fields:
+                    self._ref(self._rel(p), f, fm.get(f))
+        for name, fields in (("PROJECT.md", ("owner",)), ("DECISION-RIGHTS.md", ("confirmed_by",))):
+            p = self.root / name
+            if p.is_file():
+                try:
+                    fm, _ = read_front_matter(p)
+                except FrontMatterError:
+                    continue
+                for f in fields:
+                    self._ref(name, f, fm.get(f))
+        q = self.root / "open-questions.md"
+        if q.is_file():
+            try:
+                qfm, _ = read_front_matter(q)
+            except FrontMatterError:
+                qfm = {}
+            for item in qfm.get("questions") or []:
+                if isinstance(item, dict):
+                    for f in ("asked_by", "routed_to"):
+                        self._ref(f"open-questions.md#{item.get('id')}", f, item.get(f))
+        notes = self.root / "notes"
+        if notes.is_dir():
+            import re as _re
+            for p in sorted(notes.glob("*.md")):
+                for n, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1):
+                    m = _re.match(r"^- \d{2}:\d{2} \[([^\]]+)\] ", line)
+                    if m:
+                        self._ref(f"{self._rel(p)}:{n}", "note author", m.group(1))
 
     def check_confidentiality(self) -> None:
         cfg = dict(self.config)
@@ -296,6 +359,14 @@ class Checker:
                                          "write a new entry that supersedes it instead")
                 if folder == "decisions" and cur_fm.get("status") not in (b_fm.get("status"), "superseded"):
                     self.err("E09", rel, f"status changed {b_fm.get('status')} → {cur_fm.get('status')}")
+
+
+def _ids(value: Any) -> list[str]:
+    if value is None or value == "":
+        return []
+    if isinstance(value, (list, tuple)):
+        return [str(v) for v in value if v not in (None, "")]
+    return [str(value)]
 
 
 class _NoRoles:

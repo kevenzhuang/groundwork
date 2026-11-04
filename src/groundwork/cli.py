@@ -80,6 +80,12 @@ def init(
     force: bool = typer.Option(False, "--force", help="Overwrite existing files."),
 ) -> None:
     """Create the Groundwork layout in PATH (never overwrites without --force)."""
+    from .model import ID_RE, _suggest_id
+
+    if not ID_RE.match(owner):
+        typer.secho(f"--owner `{owner}` is not a valid id (spec §3.2). Use e.g. `{_suggest_id(owner)}`; "
+                    "put your full name in --owner-name.", fg="red", err=True)
+        raise typer.Exit(2)
     lang = i18n.normalize(_STATE["lang"]) or i18n.detect_text(title, min_letters=2) or i18n.resolve(None)
     written = init_project(path, title, owner, owner_name or owner, owner_git, force,
                            owner_github=github, github_workflow=not no_workflow,
@@ -264,6 +270,19 @@ def site(
         typer.secho(i18n.t("site.wrote", lang, path=shown, aud=a, lng=lang), fg="green")
     if "public" in targets:
         typer.secho(i18n.t("site.public", lang), fg="yellow")
+
+
+@app.command()
+def who(name: list[str] = typer.Argument(..., help="A name, alias, id or GitHub login.")) -> None:
+    """Find a member's id from how people refer to them (e.g. `gw who 王老师`)."""
+    root = _root()
+    roster, _ = parse_roster(read_front_matter(root / "ROLES.md")[0])
+    hits = roster.resolve(" ".join(name))
+    for p in hits:
+        extra = f"  @{p.github}" if p.github else ""
+        typer.echo(f"{p.id}\t{p.name}\t{','.join(p.roles)}{extra}")
+    if not hits:
+        raise typer.Exit(1)
 
 
 @app.command()

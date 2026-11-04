@@ -80,7 +80,7 @@ def test_init_with_chinese_title_speaks_chinese(tmp_path):
 
 
 def test_explicit_lang_is_saved_in_config(tmp_path):
-    r = CliRunner().invoke(app, ["--lang", "zh", "init", str(tmp_path), "-t", "Edge", "--owner", "k", "--no-workflow"])
+    r = CliRunner().invoke(app, ["--lang", "zh", "init", str(tmp_path), "-t", "Edge", "--owner", "kz", "--no-workflow"])
     assert r.exit_code == 0
     assert "language: zh" in (tmp_path / ".groundwork/config.yaml").read_text()
 

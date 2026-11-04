@@ -6,6 +6,7 @@ Both reuse site.extract so classification rules (§12) apply identically.
 from __future__ import annotations
 
 import datetime as dt
+import re
 from pathlib import Path
 from typing import Any
 
@@ -46,7 +47,7 @@ def _lang(root: Path, lang: str | None) -> str:
 
 
 def _clean(text: str | None) -> str:
-    t = (text or "").strip()
+    t = re.sub(r"<!--.*?-->", "", text or "", flags=re.DOTALL).strip()
     return "" if not t or t == BLANK else t
 
 

@@ -138,3 +138,8 @@ def test_cli_start_and_status(project, monkeypatch):
     assert r.exit_code == 0 and "No confirmed session yet" in r.output
     r = CliRunner().invoke(app, ["status"])
     assert r.exit_code == 0 and (project / "STATUS.md").is_file()
+
+
+def test_template_placeholders_not_shown(project):
+    s = render_status(project, now=NOW)
+    assert "<!--" not in s and "## Goal" not in s

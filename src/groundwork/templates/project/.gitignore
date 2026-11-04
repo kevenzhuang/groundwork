@@ -1,0 +1,4 @@
+.groundwork/build/
+.groundwork/index.sqlite
+*.pdf
+.env

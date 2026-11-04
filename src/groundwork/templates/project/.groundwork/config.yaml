@@ -1,0 +1,21 @@
+# Groundwork project configuration
+project_id: "{{ project_id }}"
+spec_version: "{{ spec_version }}"
+
+# Terms that must never appear in tracked files (spec §9.1), e.g. sponsor names,
+# grant numbers, unpublished codenames. Matching is case-insensitive.
+blocklist: []
+
+# Email addresses allowed to appear in tracked files.
+email_allowlist: []
+
+# Paths excluded from scanning (glob patterns).
+scan_exclude:
+  - ".git/**"
+  - ".groundwork/build/**"
+
+# Default veto window for T2 decisions.
+veto_window: 3d
+
+# Where raw material is archived (spec §8.3). Outside the repo by default.
+archive_dir: "~/.gw/archive/{{ project_id }}"

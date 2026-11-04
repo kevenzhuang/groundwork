@@ -50,6 +50,7 @@ def init_project(
     force: bool = False,
     owner_github: str | None = None,
     github_workflow: bool = True,
+    language: str = "auto",
     today: dt.date | None = None,
 ) -> list[Path]:
     """Render templates into `target`. Never overwrites existing files unless force=True."""
@@ -63,6 +64,7 @@ def init_project(
         "owner_github": (owner_github or "").lstrip("@"),
         "date": (today or dt.date.today()).isoformat(),
         "spec_version": SPEC_VERSION,
+        "language": language,
     }
     env = Environment(undefined=StrictUndefined, keep_trailing_newline=True, autoescape=False)
     root = resources.files("groundwork").joinpath("templates/project")

@@ -308,8 +308,11 @@ def render(root: Path, data: dict[str, Any], lang: str = "en") -> str:
     return page
 
 
-def build(root: Path, audience: str = "receiver", lang: str = "en", out: Path | None = None,
+def build(root: Path, audience: str = "receiver", lang: str | None = None, out: Path | None = None,
           now: dt.datetime | None = None) -> Path:
+    from . import i18n
+    lang = i18n.resolve(root, lang)
+    lang = lang if lang in LABELS else "en"
     page = render(root, extract(root, audience, now=now), lang)
     out = out or root / ".groundwork" / "build" / f"{audience}.html"
     out.parent.mkdir(parents=True, exist_ok=True)

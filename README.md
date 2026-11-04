@@ -31,6 +31,8 @@ file-based specification and a CLI that keep a project's record **in plain files
 - **Append-only history.** Corrections supersede earlier entries; past records are never rewritten.
 - **Confidentiality.** Content is scanned before it is written, so secrets and blocked terms never enter the record.
 - **AI-optional.** Every core command works offline with no model at all.
+- **Your language.** Prompts, briefings and pages follow the language you write in (currently English and Chinese,
+  and new languages are easy to add). What you write is stored as written, never translated.
 
 The layers above it, in progress, are: session capture (`gw end`), per-audience views
 (`gw site`), a local UI, agent integrations, and later a lab hub for multi-project oversight

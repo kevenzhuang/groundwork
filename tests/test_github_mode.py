@@ -110,7 +110,7 @@ def test_malformed_questions_file_is_reported_not_fatal(project):
 
 def test_status_zh_from_config(project):
     cfg = project / ".groundwork/config.yaml"
-    cfg.write_text(cfg.read_text().replace("language: en", "language: zh"))
+    cfg.write_text(cfg.read_text().replace("language: auto", "language: zh"))
     assert "项目状态" in render_status(project, now=NOW)
 
 

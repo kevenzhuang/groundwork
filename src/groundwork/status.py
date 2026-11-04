@@ -10,7 +10,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from .project import load_config
+from . import i18n
 from .site import LABELS, STATUS_ORDER, extract
 
 EMOJI = {"human-verified": "🟢", "auto-checked": "🔵", "unverified": "🟡", "disputed": "🔴", "retracted": "⚪"}
@@ -42,7 +42,7 @@ T = {
 
 
 def _lang(root: Path, lang: str | None) -> str:
-    lang = lang or str(load_config(root).get("language") or "en")
+    lang = i18n.resolve(root, lang)
     return lang if lang in T else "en"
 
 
@@ -56,7 +56,8 @@ def render_status(root: Path, lang: str | None = None, now: dt.datetime | None =
     t, L = T[lang], LABELS[lang]
     d = extract(root, "advisor", now=now)
     m, pf, ps = d["meta"], d["project"]["fm"], d["project"]["sections"]
-    out: list[str] = [f"# {t['title']}: {pf.get('title') or ''}".rstrip(": "), ""]
+    sep = "：" if lang == "zh" else ": "
+    out: list[str] = [f"# {t['title']}{sep}{pf.get('title') or ''}".rstrip(": ："), ""]
     out.append(f"> {t['auto']}  ")
     out.append(f"> {t['stage']}: **{pf.get('stage', '?')}** · {t['updated']}: {m['generated_at'].replace('T', ' ')}"
                f" · {t['commit']}: `{(m['commit'] or 'n/a')[:8]}`")
@@ -131,36 +132,38 @@ def write_status(root: Path, lang: str | None = None, now: dt.datetime | None = 
     return path
 
 
-def briefing(root: Path, who: str, now: dt.datetime | None = None) -> str:
+def briefing(root: Path, who: str, now: dt.datetime | None = None, lang: str | None = None) -> str:
     """Plain-text start-of-work briefing for a human or an agent (spec §5.1, §13.5)."""
+    lang = _lang(root, lang)
+    tr = lambda k, **kw: i18n.t(k, lang, **kw)  # noqa: E731
     d = extract(root, "receiver", now=now)
     pf = d["project"]["fm"]
-    lines = [f"Project: {pf.get('title', '?')}  (stage: {pf.get('stage', '?')})"]
+    lines = [tr("start.project", title=pf.get("title", "?"), stage=pf.get("stage", "?"))]
     confirmed = [s for s in d["sessions"] if s["fm"].get("confirmed_by")]
     drafts = [s for s in d["sessions"] if not s["fm"].get("confirmed_by")]
     if confirmed:
         s = confirmed[0]
-        lines.append(f"\nLast session: {s['fm'].get('date')} by {s['fm'].get('principal')}")
+        lines.append("\n" + tr("start.last", date=s["fm"].get("date"), who=s["fm"].get("principal")))
         for key in ("Did", "Thinking", "Blocked", "Next", "Unverified items touched"):
             val = _clean(s["sections"].get(key))
             if val:
-                lines.append(f"  {key}: {' '.join(val.split())}")
+                sep = "：" if lang == "zh" else ": "
+                lines.append(f"  {tr('sec.' + key)}{sep}{' '.join(val.split())}")
     else:
-        lines.append("\nNo confirmed session yet. Run `gw end` when you finish working.")
+        lines.append("\n" + tr("start.none"))
     if drafts:
-        lines.append(f"\n⚠ {len(drafts)} unconfirmed session draft(s): " + ", ".join(s["file"] for s in drafts))
+        lines.append("\n" + tr("start.drafts", n=len(drafts), files=", ".join(s["file"] for s in drafts)))
     if d["pending_decisions"]:
-        lines.append("\nWaiting for a decision:")
+        lines.append("\n" + tr("start.pending"))
         lines += [f"  #{x['fm'].get('id')} [{x['fm'].get('tier')}] {x['fm'].get('title')}" for x in d["pending_decisions"]]
     mine = [q for q in d["questions"] if str(q.get("routed_to")) == who]
     if mine:
-        lines.append(f"\nQuestions for you ({who}):")
+        lines.append("\n" + tr("start.questions", who=who))
         lines += [f"  {q.get('id')}: {q.get('question')}" for q in mine]
     v = d["verification"]
     if v["total"]:
-        lines.append(f"\nVerification: {v['counts']['human-verified']}/{v['total']} human-verified, "
-                     f"{v['counts']['unverified']} unverified, {v['counts']['disputed']} disputed, "
-                     f"{v['oral_only']} oral-only")
+        lines.append("\n" + tr("start.verif", h=v["counts"]["human-verified"], t=v["total"],
+                                u=v["counts"]["unverified"], d=v["counts"]["disputed"], o=v["oral_only"]))
     if d["meta"]["unreadable"]:
-        lines.append("\n⚠ Unreadable records (run `gw check`): " + ", ".join(d["meta"]["unreadable"]))
+        lines.append("\n" + tr("start.unreadable", files=", ".join(d["meta"]["unreadable"])))
     return "\n".join(lines)

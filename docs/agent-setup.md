@@ -1,8 +1,12 @@
 # Groundwork: setup and daily use (instructions for AI agents)
 
 You are an AI coding agent (Claude Code, Codex, or similar). A human asked you to use Groundwork
-for the current project. Follow these steps. Speak to the human in their language. Keep it short:
-the human should not have to learn commands or concepts.
+for the current project. Follow these steps. Keep it short: the human should not have to learn
+commands or concepts.
+
+**Language.** Talk to the human in the language they use with you. Record their answers in their
+own words, without translating or polishing them. Groundwork chooses the language of its prompts
+and pages automatically. To force one, set `language: zh` (or `en`) in `.groundwork/config.yaml`.
 
 ## A. One-time setup
 

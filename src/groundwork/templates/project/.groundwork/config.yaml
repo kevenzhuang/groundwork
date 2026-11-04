@@ -17,8 +17,10 @@ scan_exclude:
 # Default veto window for T2 decisions.
 veto_window: 3d
 
-# Language for STATUS.md and views: en | zh
-language: en
+# Language for STATUS.md, views and prompts: auto | en | zh
+# auto = the language the record is written in, else the system language.
+# Record content is never translated.
+language: {{ language }}
 
 # Archive agent transcripts at session end (spec §8.3). Off by default.
 # When on, copies go to .groundwork/archive/ (gitignored), never outside the project.

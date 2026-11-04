@@ -36,6 +36,15 @@ Principles:
 8. **AI-optional.** Every core operation MUST work without an AI model. AI is an optional enhancement.
 9. **Local-first.** Tools MUST work offline and MUST NOT send data anywhere unless the user configures it.
 10. **Classify before storing.** Confidential content must not enter the record by accident.
+11. **Speak the user's language; never translate the record.** Tools SHOULD present prompts, briefings and views in the user's language. They resolve it in this order:
+    1. an explicit choice;
+    2. the `GW_LANG` environment variable;
+    3. the project setting;
+    4. the language of the record's own prose (titles and fixed headings are ignored);
+    5. the system locale;
+    6. English.
+
+    Record content MUST be stored as written, never machine-translated, because translation can distort meaning.
 
 ---
 

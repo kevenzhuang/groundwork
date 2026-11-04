@@ -1,4 +1,4 @@
-"""Command-line interface: `gw`."""
+"""Command-line interface: `gw`. User-facing text adapts to the user's language (see i18n.py)."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from typing import Optional
 
 import typer
 
-from . import SPEC_VERSION, __version__, gitutil
+from . import SPEC_VERSION, __version__, gitutil, i18n
 from .check import run_check
 from .init import init_project
 from .model import parse_roster, read_front_matter
@@ -21,6 +21,20 @@ app = typer.Typer(
     no_args_is_help=True,
     help="Groundwork: research workflows you can trust, hand over, and build on. Spec v" + SPEC_VERSION,
 )
+_STATE: dict[str, Optional[str]] = {"lang": None}
+
+
+@app.callback()
+def _main(lang: Optional[str] = typer.Option(None, "--lang", help="Interface language: en | zh (default: auto).")):
+    _STATE["lang"] = lang
+
+
+def _lang(root: Path | None = None) -> str:
+    return i18n.resolve(root, _STATE["lang"])
+
+
+def _t(root: Path | None, key: str, **kw) -> str:
+    return i18n.t(key, _lang(root), **kw)
 
 
 def _root() -> Path:
@@ -66,12 +80,14 @@ def init(
     force: bool = typer.Option(False, "--force", help="Overwrite existing files."),
 ) -> None:
     """Create the Groundwork layout in PATH (never overwrites without --force)."""
+    lang = i18n.normalize(_STATE["lang"]) or i18n.detect_text(title, min_letters=2) or i18n.resolve(None)
     written = init_project(path, title, owner, owner_name or owner, owner_git, force,
-                           owner_github=github, github_workflow=not no_workflow)
+                           owner_github=github, github_workflow=not no_workflow,
+                           language=lang if i18n.normalize(_STATE["lang"]) else "auto")
     for w in written:
-        typer.echo(f"  created {w.relative_to(path.resolve()) if w.is_absolute() else w}")
-    typer.secho(f"Initialized Groundwork project in {path.resolve()}", fg="green")
-    typer.echo("Next: edit PROJECT.md, review ROLES.md and DECISION-RIGHTS.md, then run `gw check`.")
+        typer.echo(i18n.t("init.created", lang, path=w.relative_to(path.resolve()) if w.is_absolute() else w))
+    typer.secho(i18n.t("init.done", lang, path=path.resolve()), fg="green")
+    typer.echo(i18n.t("init.next", lang))
 
 
 @app.command()
@@ -90,9 +106,9 @@ def note(
         typer.secho(str(exc), fg="red", err=True)
         for f in exc.findings:
             typer.echo(f"  {f.kind}: {f.excerpt}", err=True)
-        typer.echo("Rephrase without it, or write a placeholder like [withheld: credential; ask <id>].", err=True)
+        typer.echo(_t(root, "note.blocked_hint"), err=True)
         raise typer.Exit(1)
-    typer.echo(f"noted → {path.relative_to(root)}")
+    typer.echo(_t(root, "note.ok", path=path.relative_to(root)))
 
 
 @app.command()
@@ -105,19 +121,22 @@ def end(
     confirm: bool = typer.Option(False, "--confirm", help="Mark the session confirmed by --as (humans only)."),
     archive_logs: Optional[bool] = typer.Option(None, "--archive-logs/--no-archive-logs",
                                                 help="Archive agent transcripts into .groundwork/archive (default: config)."),
+    lang: Optional[str] = typer.Option(None, "--lang", help="en | zh (default: auto)."),
 ) -> None:
     """End a working session: collect changes, ask only for reasons, write sessions/…md."""
     import yaml
 
     from .capture import SECTIONS, Blocked, collect, group_changes, missing_reasons, write_session
-    from .model import parse_roster
 
+    _STATE["lang"] = lang or _STATE["lang"]
     root = _root()
+    lang = _lang(root)
+    T = lambda k, **kw: i18n.t(k, lang, **kw)  # noqa: E731
     who = principal or _default_principal(root)
     roster, _ = parse_roster(read_front_matter(root / "ROLES.md")[0])
     is_agent = roster.is_agent(who)
     if confirm and is_agent:
-        typer.secho("An agent cannot confirm a session (spec §5.2). Ask the human to confirm.", fg="red", err=True)
+        typer.secho(T("end.agent_confirm"), fg="red", err=True)
         raise typer.Exit(1)
 
     col = collect(root, include_agent_logs=archive_logs)
@@ -125,10 +144,9 @@ def end(
     if answers_file:
         answers = yaml.safe_load(answers_file.read_text(encoding="utf-8")) or {}
 
-    typer.secho(f"Session for {who}" + (f" since {col.since:%Y-%m-%d %H:%M}" if col.since else " (first session)"),
-                bold=True)
-    typer.echo(f"  {len(col.changes)} changed file(s), {len(col.notes)} note(s), "
-               f"{len(col.agent_logs)} agent transcript(s) to archive")
+    span = T("end.since", t=f"{col.since:%Y-%m-%d %H:%M}") if col.since else T("end.first")
+    typer.secho(T("end.header", who=who) + span, bold=True)
+    typer.echo(T("end.summary", c=len(col.changes), n=len(col.notes), a=len(col.agent_logs)))
 
     if preview:
         for c in col.changes:
@@ -141,67 +159,63 @@ def end(
     if interactive:
         reasons = dict(answers.get("reasons") or {})
         for label, members in group_changes([c for c in col.changes if not reasons.get(c.path)]).items():
-            what = f"`{label}`" if len(members) == 1 else f"{len(members)} files in `{label}`"
-            r = typer.prompt(f"  Why did {what} change? (Enter to skip)", default="", show_default=False)
+            q = T("end.why_one", x=label) if len(members) == 1 else T("end.why_many", n=len(members), x=label)
+            r = typer.prompt(q, default="", show_default=False)
             if r.strip():
                 for c in members:
                     reasons[c.path] = r.strip()
         answers["reasons"] = reasons
-        prompts = {
-            "did": "What did you do? (one line is fine)",
-            "thinking": "What were you thinking or trying?",
-            "blocked": "Anything blocked?",
-            "next": "What's next?",
-            "unverified": "Anything you relied on that isn't verified yet?",
-        }
         for key in SECTIONS:
             if not answers.get(key):
-                answers[key] = typer.prompt(f"  {prompts[key]}", default="", show_default=False)
+                answers[key] = typer.prompt(T(f"end.q.{key}"), default="", show_default=False)
         if not is_agent and not confirm:
-            confirm = typer.confirm("Confirm this record as accurate?", default=True)
+            confirm = typer.confirm(T("end.confirm"), default=True)
 
     try:
-        path = write_session(root, who, col, answers, confirm=confirm and not is_agent,
-                             archive=True)
+        path = write_session(root, who, col, answers, confirm=confirm and not is_agent, archive=True)
     except Blocked as exc:
         typer.secho(str(exc), fg="red", err=True)
         for f in exc.findings:
             typer.echo(f"  {f.kind}: {f.excerpt}", err=True)
-        typer.echo("Remove it or use a placeholder like [withheld: credential; ask <id>].", err=True)
+        typer.echo(T("end.blocked_hint"), err=True)
         raise typer.Exit(1)
 
     missing = missing_reasons(col, answers)
-    typer.secho(f"wrote {path.relative_to(root)}", fg="green")
+    typer.secho(T("end.wrote", path=path.relative_to(root)), fg="green")
     if missing:
-        typer.secho(f"  {len(missing)} change(s) without a reason: " + ", ".join(missing[:5])
-                    + (" …" if len(missing) > 5 else ""), fg="yellow")
+        files = ", ".join(missing[:5]) + (" …" if len(missing) > 5 else "")
+        typer.secho(T("end.missing", n=len(missing), files=files), fg="yellow")
     if not confirm or is_agent:
-        typer.echo("  Draft is unconfirmed. A human confirms with: gw end --confirm  (or edit and set confirmed_by)")
-    typer.echo("  Next: review, commit, and open a PR.")
+        typer.echo(T("end.unconfirmed"))
+    typer.echo(T("end.next"))
 
 
 @app.command()
-def start(principal: Optional[str] = typer.Option(None, "--as", help="Principal id (default: from git email).")) -> None:
+def start(principal: Optional[str] = typer.Option(None, "--as", help="Principal id (default: from git email)."),
+          lang: Optional[str] = typer.Option(None, "--lang", help="en | zh (default: auto).")) -> None:
     """Start-of-work briefing: where things stand, what's next, what needs you."""
     from .status import briefing
 
+    _STATE["lang"] = lang or _STATE["lang"]
     root = _root()
-    typer.echo(briefing(root, principal or _default_principal(root)))
+    typer.echo(briefing(root, principal or _default_principal(root), lang=_lang(root)))
 
 
 @app.command()
 def status(
-    lang: Optional[str] = typer.Option(None, "--lang", help="en | zh (default: config `language`)."),
     stdout: bool = typer.Option(False, "--stdout", help="Print instead of writing STATUS.md."),
+    lang: Optional[str] = typer.Option(None, "--lang", help="en | zh (default: auto)."),
 ) -> None:
     """Regenerate STATUS.md, the status page GitHub shows (spec §13)."""
     from .status import render_status, write_status
 
+    _STATE["lang"] = lang or _STATE["lang"]
     root = _root()
+    lang = _lang(root)
     if stdout:
         typer.echo(render_status(root, lang))
     else:
-        typer.secho(f"wrote {write_status(root, lang).relative_to(root)}", fg="green")
+        typer.secho(i18n.t("status.wrote", lang, path=write_status(root, lang).relative_to(root)), fg="green")
 
 
 @app.command()
@@ -226,18 +240,20 @@ def approvals(
 @app.command()
 def site(
     audience: str = typer.Option("receiver", "--for", help="owner | advisor | receiver | public"),
-    lang: str = typer.Option("en", "--lang", help="en | zh"),
     out: Optional[Path] = typer.Option(None, "--out", "-o", help="Output file (default .groundwork/build/<audience>.html)."),
     all_: bool = typer.Option(False, "--all", help="Build owner, advisor and receiver views."),
+    lang: Optional[str] = typer.Option(None, "--lang", help="en | zh (default: auto)."),
 ) -> None:
     """Generate a self-contained, read-only HTML view of the record."""
     from .site import AUDIENCES, TemplateViolation, build
 
+    _STATE["lang"] = lang or _STATE["lang"]
     root = _root()
+    lang = _lang(root)
     targets = ["owner", "advisor", "receiver"] if all_ else [audience]
     for a in targets:
-        if a not in AUDIENCES or lang not in ("en", "zh"):
-            typer.secho(f"unknown audience/lang: {a}/{lang}", fg="red", err=True)
+        if a not in AUDIENCES:
+            typer.secho(f"unknown audience: {a}", fg="red", err=True)
             raise typer.Exit(2)
         try:
             path = build(root, a, lang, out if not all_ else None)
@@ -245,9 +261,9 @@ def site(
             typer.secho(str(exc), fg="red", err=True)
             raise typer.Exit(1)
         shown = path.relative_to(root) if path.is_relative_to(root) else path
-        typer.secho(f"wrote {shown}  ({a}, {lang})", fg="green")
+        typer.secho(i18n.t("site.wrote", lang, path=shown, aud=a, lng=lang), fg="green")
     if "public" in targets:
-        typer.secho("Publishing a public view is a T3 decision (spec §12).", fg="yellow")
+        typer.secho(i18n.t("site.public", lang), fg="yellow")
 
 
 @app.command()
@@ -266,7 +282,7 @@ def check(
         for i in issues:
             color = "red" if i.level == "error" else "yellow"
             typer.secho(f"{i.code} {i.level:7} {i.path}: {i.message}", fg=color)
-        summary = f"{len(errors)} error(s), {len(warnings)} warning(s)"
+        summary = _t(root, "check.summary", e=len(errors), w=len(warnings))
         typer.secho(("✗ " if errors else "✓ ") + summary, fg="red" if errors else "green")
     if errors or (strict and warnings):
         raise typer.Exit(1)

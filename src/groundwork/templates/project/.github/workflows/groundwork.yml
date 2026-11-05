@@ -37,20 +37,28 @@ jobs:
   status:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
+    # One status update at a time; a newer push supersedes an older run.
+    concurrency:
+      group: groundwork-status-${{ github.ref }}
+      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - run: pip install "git+https://github.com/kevenzhuang/groundwork@v__GW_VERSION__"
-      - name: Regenerate STATUS.md
-        run: gw status
-      - name: Commit if changed
+      - name: Commit if changed (retries if main moved meanwhile)
         run: |
-          if ! git diff --quiet -- STATUS.md; then
-            git config user.name "groundwork-bot"
-            git config user.email "groundwork-bot@users.noreply.github.com"
+          git config user.name "groundwork-bot"
+          git config user.email "groundwork-bot@users.noreply.github.com"
+          for attempt in 1 2 3; do
+            git fetch -q origin "$GITHUB_REF_NAME"
+            git reset -q --hard "origin/$GITHUB_REF_NAME"
+            gw status
+            if git diff --quiet -- STATUS.md; then echo "STATUS.md up to date"; exit 0; fi
             git add STATUS.md
-            git commit -m "Update STATUS.md [skip ci]"
-            git push
-          fi
+            git commit -q -m "Update STATUS.md [skip ci]"
+            if git push -q origin "HEAD:$GITHUB_REF_NAME"; then exit 0; fi
+            echo "main moved during the run; retrying ($attempt)"; sleep $((attempt * 3))
+          done
+          echo "::warning::could not update STATUS.md after 3 attempts; the next push will regenerate it"

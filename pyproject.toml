@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "groundwork-lab"
-version = "0.3.0"
+version = "0.3.1"
 description = "Research workflows you can trust, hand over, and build on: the open workflow standard and platform for human-AI research."
 readme = "README.md"
 license = "Apache-2.0"

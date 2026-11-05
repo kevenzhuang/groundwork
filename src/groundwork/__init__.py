@@ -1,6 +1,6 @@
 """Groundwork: research workflows you can trust, hand over, and build on."""
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 SPEC_VERSION = "0.3"
 
 

@@ -93,3 +93,13 @@ def test_cli_upgrade(project, monkeypatch):
     r = CliRunner().invoke(app, ["upgrade"])
     assert r.exit_code == 0 and "pull request" in r.output
     assert "already on spec" in CliRunner().invoke(app, ["upgrade"]).output
+
+
+def test_patch_upgrade_refreshes_workflow(project):
+    wf = project / ".github/workflows/groundwork.yml"
+    wf.write_text("name: groundwork\n# old workflow without the status-race fix\n"
+                  "run: pip install git+https://github.com/kevenzhuang/groundwork@v0.3.0\n")
+    res = upgrade(project)
+    assert ".github/workflows/groundwork.yml" in res.changed
+    text = wf.read_text()
+    assert "cancel-in-progress: true" in text and f"@v{__version__}" in text and "retrying" in text

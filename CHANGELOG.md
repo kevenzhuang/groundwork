@@ -3,6 +3,13 @@
 Versions follow the spec they implement: tool `0.3.x` implements spec `0.3`.
 Entries marked **Action needed** may require changes to your project after `gw upgrade`.
 
+## 0.3.1 (2026-11-05)
+
+- Fix: the `status` job could fail with "non-fast-forward" when two pushes landed close together.
+  Status updates now run one at a time (newer pushes cancel older runs), resync with `main`, and retry.
+- `gw upgrade` now refreshes the project's workflow file from the current template. Review the diff in
+  the upgrade pull request if you had customized it.
+
 ## 0.3.0 (2026-11-04)
 
 - **Action needed. Member identity rules (E12).** Each member's `id` must be lowercase letters, digits and

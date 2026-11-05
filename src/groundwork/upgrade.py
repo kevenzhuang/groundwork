@@ -100,8 +100,10 @@ def upgrade(root: Path, dry_run: bool = False) -> UpgradeResult:
 
     wf = root / ".github" / "workflows" / "groundwork.yml"
     if wf.is_file():
-        text = wf.read_text(encoding="utf-8")
-        write(".github/workflows/groundwork.yml", PIN.sub(lambda m: f"{m.group(1)}@v{__version__}", text))
+        # Refresh the workflow from the current template (pinned to this version). Local edits show
+        # up in the upgrade pull request's diff, where they can be re-applied if still wanted.
+        template = resources.files("groundwork").joinpath("templates/project/.github/workflows/groundwork.yml")
+        write(".github/workflows/groundwork.yml", template.read_text(encoding="utf-8").replace("__GW_VERSION__", __version__))
 
     cfg_path = root / ".groundwork" / "config.yaml"
     if cfg_path.is_file():
